@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>second brain</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* macOS-inspired dark palette */
+      --bg:        #1e1e1e;
+      --surface:   #2d2d2d;
+      --surface-hi:#3a3a3c;
+      --border:    rgba(255, 255, 255, 0.1);
+      --border-hi: rgba(255, 255, 255, 0.2);
+      --text:      #f5f5f7;
+      --muted:     #aeaeae;
+      --faint:     #636366;
+      --accent:    #007aff; /* Apple Blue */
+      --red:       #ff453a;
+      --orange:    #ff9f0a;
+      --green:     #30d158;
+      --blue:      #0a84ff;
+      --violet:    #bf5af2;
+      --pink:      #ff375f;
+      --yellow:    #ffd60a;
+      --radius:    12px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      max-width: 720px;
+      margin: 64px auto;
+      padding: 0 32px 96px;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.47059;
+      letter-spacing: -0.022em;
+      -webkit-font-smoothing: antialiased;
+    }
+    body.web-mode {
+      max-width: none;
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    body.web-mode .topbar {
+      position: fixed;
+      top: 20px;
+      left: 32px;
+      right: 32px;
+      z-index: 60;
+      margin: 0;
+      padding: 14px 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(45, 45, 47, 0.8);
+      backdrop-filter: blur(20px) saturation(180%);
+      -webkit-backdrop-filter: blur(20px) saturation(180%);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    /* ── topbar ── */
+    .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 36px; }
+    .topbar h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.025em; color: var(--text); }
+    .topbar p  { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .top-actions { display: flex; gap: 10px; align-items: center; }
+    
+    /* macOS Window-like Buttons */
+    .view-btn,
+    .icon-btn,
+    .dots-btn {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 6px 14px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text);
+      transition: background .15s, border-color .15s, transform .1s;
+    }
+    .icon-btn { width: 32px; height: 32px; padding: 0; display: grid; place-items: center; font-size: 15px; }
+    .dots-btn { width: 32px; height: 32px; padding: 0; display: grid; place-items: center; font-size: 16px; font-weight: bold; }
+    .view-btn { font-size: 13px; padding: 6px 14px; }
+    .view-btn.active { background: rgba(48, 209, 88, 0.15); color: var(--green); border-color: rgba(48, 209, 88, 0.3); }
+    .dots-btn:hover,
+    .icon-btn:hover,
+    .view-btn:hover { border-color: var(--border-hi); background: var(--surface-hi); }
+    .dots-btn:active, .icon-btn:active, .view-btn:active { transform: scale(0.97); }
+
+    /* ── reminder ── */
+    #reminder {
+      display: none; background: var(--surface); border: 1px solid var(--border);
+      border-left: 4px solid var(--accent); border-radius: var(--radius);
+      padding: 16px 18px; margin-bottom: 28px; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transition: background .15s, border-color .15s;
+    }
+    #reminder:hover { border-color: var(--border-hi); background: var(--surface-hi); }
+    .r-label   { font-size: 11px; font-weight: 600; color: var(--accent); margin-bottom: 6px; letter-spacing: .05em; text-transform: uppercase; }
+    .r-title   { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .r-summary { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+    /* ── search ── */
+    .search-row { display: flex; gap: 10px; margin-bottom: 24px; }
+    .search-wrapper { position: relative; flex: 1; display: flex; }
+    .clear-inline-btn {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--faint); font-size: 16px;
+      cursor: pointer; display: none; padding: 2px;
+    }
+    .clear-inline-btn:hover { color: var(--muted); }
+    
+    #search-input {
+      width: 100%; padding: 10px 36px 10px 16px; font-size: 14px;
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.05); color: var(--text);
+      transition: border-color .15s, background .15s;
+    }
+    #search-input::placeholder { color: var(--faint); }
+    #search-input:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+    .search-btn {
+      padding: 10px 20px; font-size: 13px; font-weight: 500; background: var(--surface);
+      color: var(--text); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); cursor: pointer; transition: all .15s;
+    }
+    .search-btn:hover { border-color: var(--border-hi); background: var(--surface-hi); }
+
+    /* Native macOS Segmented Control styling */
+    .filter-row {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; margin: -10px 0 24px;
+    }
+    .segmented {
+      display: inline-flex; padding: 2px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.06); gap: 2px;
+    }
+    .segmented button {
+      border: 0; background: transparent; color: var(--muted);
+      padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .segmented button.active { background: var(--surface-hi); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    .filter-note { font-size: 13px; color: var(--muted); }
+
+    /* ── search results ── */
+    #search-results { display: none; margin-bottom: 28px; }
+    .sr-header { font-size: 13px; font-weight: 500; color: var(--muted); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .sr-actions { display: flex; gap: 12px; align-items: center; }
+    .sr-clear { background: none; border: none; font-size: 13px; color: var(--faint); cursor: pointer; }
+    .sr-clear:hover { color: var(--muted); }
+    .sr-web { background: none; border: none; font-size: 13px; color: var(--green); font-weight: 500; cursor: pointer; }
+    .sr-web:hover { color: var(--text); }
+
+    /* ── tags section ── */
+    #tags-section { margin-bottom: 28px; }
+    .collapsible-header {
+      display: flex; justify-content: space-between; align-items: center;
+      cursor: pointer; padding: 12px 0; border-bottom: 1px solid var(--border);
+      user-select: none;
+    }
+    .collapsible-header span { font-size: 12px; font-weight: 600; color: var(--faint); letter-spacing: .06em; text-transform: uppercase; }
+    .collapsible-chevron { font-size: 12px; color: var(--faint); transition: transform .2s ease; }
+    .collapsible-chevron.open { transform: rotate(180deg); }
+    #tags-body { padding-top: 14px; display: none; }
+    #tags-body.open { display: block; }
+    .tag-cloud { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px; border-radius: 14px;
+      border: 1px solid var(--border); background: rgba(255,255,255,0.04);
+      font-size: 12px; color: var(--muted); font-weight: 500; cursor: pointer;
+      transition: background .15s, border-color .15s, color .15s;
+    }
+    .tag-pill:hover { border-color: var(--border-hi); background: var(--surface); color: var(--text); }
+    .tag-pill.tag-lg { font-size: 13px; color: var(--text); border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.07); }
+    .tag-cloud .tag-count { font-size: 11px; color: var(--faint); font-weight: 600; }
+    .tags-empty { font-size: 13px; color: var(--faint); padding: 4px 0; }
+
+    /* ── result / entry cards (shared) ── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-left: 4px solid var(--faint);
+      border-radius: var(--radius); padding: 16px 18px; margin-bottom: 10px;
+      cursor: pointer; transition: border-color .15s, background .15s, transform .15s;
+      position: relative;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .card:hover { border-color: var(--border-hi); background: var(--surface-hi); }
+    .card:active { transform: scale(0.995); }
+    .card-title  { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; padding-right: 48px; letter-spacing: -0.015em; }
+    .card-meta   { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+    .card-tags   { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .card-tag    { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 10px; background: rgba(0,0,0,0.2); color: var(--muted); border: 1px solid var(--border); }
+    .imp-dot     { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+    .pin-btn { position: absolute; top: 14px; right: 40px; background: none; border: none; color: var(--faint); cursor: pointer; font-size: 15px; transition: color .15s; }
+    .pin-btn.pinned { color: var(--yellow); }
+    .mood-chip { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.02em; }
+
+    /* saved card (after classify) */
+    #saved-card { display: none; margin-top: 20px; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--green); border-radius: var(--radius); padding: 16px 18px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); }
+    #saved-card .sc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    #saved-card .sc-title { font-size: 16px; font-weight: 600; color: var(--text); }
+    #saved-card .sc-imp { font-size: 13px; color: var(--muted); display: flex; align-items: center; }
+    #saved-card .sc-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    #saved-card .sc-tag { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 10px; background: rgba(0,0,0,0.2); color: var(--muted); border: 1px solid var(--border); }
+    #saved-card .sc-summary { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+
+    /* delete button */
+    .delete-btn { position: absolute; top: 14px; right: 14px; background: none; border: none; font-size: 16px; color: var(--faint); cursor: pointer; transition: color .15s; }
+    .delete-btn:hover { color: var(--red); }
+
+    /* ── textarea ── */
+    textarea {
+      width: 100%; height: 180px; padding: 16px; font-size: 14px;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      resize: vertical; background: rgba(255, 255, 255, 0.03); color: var(--text);
+      transition: border-color .15s, background .15s; font-family: inherit; line-height: 1.6;
+      box-shadow: inset 0 1px 4px rgba(0,0,0,0.2);
+    }
+    textarea::placeholder { color: var(--faint); }
+    textarea:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+
+    .btn-row { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+    .btn {
+      padding: 10px 24px; font-size: 13px; font-weight: 600; background: var(--accent);
+      color: #fff; border: none;
+      border-radius: var(--radius-sm); cursor: pointer; transition: background .15s, transform .1s;
+      box-shadow: 0 2px 6px rgba(0, 122, 255, 0.3);
+    }
+    .btn:hover { background: #0062cc; }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: .4; cursor: default; transform: none; background: var(--surface); color: var(--faint); box-shadow: none; border: 1px solid var(--border); }
+    #status { font-size: 13px; color: var(--muted); font-weight: 500; }
+
+    /* Secondary buttons inside modal/settings should look like default macOS buttons */
+    #settings .btn, .wd-actions button {
+      background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: none;
+    }
+    #settings .btn:hover, .wd-actions button:hover { background: var(--surface-hi); border-color: var(--border-hi); }
+    #settings .btn:first-of-type { background: var(--accent); color: white; border: none; }
+    #settings .btn:first-of-type:hover { background: #0062cc; }
+
+    /* spider web view */
+    #main-view.hidden { display: none; }
+    #web-view {
+      display: none;
+      margin-top: 6px;
+    }
+    #web-view.open { display: block; }
+    body.web-mode #web-view.open {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      margin: 0;
+      padding: 100px 32px 32px;
+      background: var(--bg);
+    }
+    .web-toolbar {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 24px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .web-title-block { display: flex; flex-direction: column; min-width: 140px; }
+    .web-title {
+      font-size: 14px; font-weight: 600; color: var(--text); letter-spacing: -0.01em;
+      outline: none; border-bottom: 1px dashed transparent; display: inline-block; cursor: text;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .web-title:hover { border-color: var(--muted); color: #fff; }
+    .web-title:focus { border-color: var(--accent); color: #fff; background: rgba(255,255,255,0.03); padding: 0 4px; border-radius: 4px; }
+    .web-hint { font-size: 12px; color: var(--muted); margin-top: 1px; }
+    .web-actions { 
+      display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: flex-end; flex: 1; 
+      padding-right: 6px;
+    }
+    .web-search-box { position: relative; width: 180px; display: flex; }
+    .web-search-box input {
+      width: 100%; padding: 6px 28px 6px 12px; font-size: 13px;
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.05); color: var(--text);
+      transition: all .15s;
+    }
+    .web-search-box input:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+    
+    .web-shell {
+      position: relative; height: min(78vh, 820px); min-height: 560px;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background:
+        radial-gradient(circle at 18% 18%, rgba(0,122,255,0.08), transparent 30%),
+        radial-gradient(circle at 86% 22%, rgba(48,209,88,0.06), transparent 28%),
+        #161617;
+      overflow: hidden;
+      box-shadow: inset 0 0 40px rgba(0,0,0,0.6);
+    }
+    body.web-mode .web-shell {
+      height: 100%;
+      min-height: 0;
+      border-radius: 0;
+      border: none;
+      border-top: 1px solid var(--border);
+    }
+    #web-svg { width: 100%; height: 100%; display: block; cursor: grab; }
+    #web-svg.dragging { cursor: grabbing; }
+    .web-link { vector-effect: non-scaling-stroke; transition: stroke 0.15s, stroke-width 0.15s; }
+    .web-node { vector-effect: non-scaling-stroke; transition: fill 0.15s, stroke 0.15s, stroke-width 0.15s; }
+    .web-label {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      pointer-events: none;
+      paint-order: stroke;
+      stroke: #161617;
+      stroke-width: 4px;
+      stroke-linejoin: round;
+      font-weight: 500;
+    }
+    .web-empty {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      padding: 28px; text-align: center; color: var(--faint); font-size: 14px;
+    }
+    .web-empty.open { display: flex; }
+    
+    /* Heads up display inside web view */
+    #web-details {
+      position: absolute; left: 16px; bottom: 16px; right: 16px;
+      max-width: 440px; padding: 16px; border: 1px solid var(--border);
+      border-radius: var(--radius); background: rgba(45, 45, 47, 0.85);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4); display: none;
+      z-index: 50;
+    }
+    #web-details.open { display: block; }
+    .wd-kicker { font-size: 11px; font-weight: 700; color: var(--accent); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .06em; text-transform: uppercase; }
+    .wd-title { font-size: 16px; color: var(--text); font-weight: 600; margin-bottom: 6px; letter-spacing: -0.015em; }
+    .wd-meta { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .wd-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .wd-tag { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: var(--muted); }
+    .wd-actions { display: flex; gap: 8px; margin-top: 14px; }
+    .wd-actions button {
+      border: 1px solid var(--border); background: var(--surface); color: var(--text);
+      border-radius: var(--radius-sm); padding: 6px 12px; font-size: 13px; font-weight: 500; cursor: pointer;
+    }
+
+    @media (max-width: 640px) {
+      body { margin-top: 32px; padding: 0 16px 64px; }
+      .topbar { gap: 14px; align-items: flex-start; }
+      .top-actions { align-items: flex-end; flex-direction: column-reverse; }
+      .search-row { flex-direction: column; }
+      .filter-row { align-items: flex-start; flex-direction: column; gap: 14px; }
+      .segmented { width: 100%; }
+      .segmented button { flex: 1; }
+      .search-btn, .btn, .view-btn { width: 100%; }
+      .web-toolbar { align-items: flex-start; flex-direction: column; gap: 16px; }
+      .web-actions { width: 100%; justify-content: stretch; flex-direction: column; align-items: stretch; padding-right: 0; }
+      .web-search-box { width: 100%; }
+      body.web-mode { max-width: none; }
+      body.web-mode .topbar { left: 16px; right: 16px; top: 16px; }
+      body.web-mode #web-view.open { padding: 130px 16px 16px; }
+      .web-shell { height: 65vh; min-height: 420px; }
+      #panel { width: 100vw; right: -100vw; }
+    }
+
+    /* ── panel overlay ── */
+    #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 99; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+    #overlay.open { display: block; }
+
+    /* ── slide-in panel (macOS Sheet Sidebar style) ── */
+    #panel {
+      position: fixed; top: 0; right: -380px; width: 360px; height: 100vh;
+      background: rgba(30, 30, 32, 0.9); border-left: 1px solid var(--border);
+      padding: 24px 20px; overflow-y: auto;
+      backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+      transition: right .25s cubic-bezier(0.16, 1, 0.3, 1); z-index: 100;
+      box-shadow: -10px 0 40px rgba(0,0,0,0.3);
+    }
+    #panel.open { right: 0; }
+    #panel h3 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 20px; letter-spacing: -0.01em; }
+    .close-btn { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.08); border: none; font-size: 16px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; color: var(--muted); }
+    .close-btn:hover { color: var(--text); background: rgba(255,255,255,0.15); }
+    .panel-empty { font-size: 13px; color: var(--faint); text-align: center; margin-top: 40px; }
+
+    /* ── modal ── */
+    #modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 200;
+      align-items: center; justify-content: center;
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    }
+    #modal-overlay.open { display: flex; }
+    #modal {
+      background: #2d2d2f; border: 1px solid var(--border);
+      border-radius: 16px; width: 90%; max-width: 540px;
+      max-height: 85vh; overflow-y: auto; padding: 32px;
+      position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    .m-label   { font-size: 11px; font-weight: 700; color: var(--accent); margin-bottom: 12px; letter-spacing: .06em; text-transform: uppercase; }
+    .m-title   { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 10px; line-height: 1.25; letter-spacing: -.02em; }
+    .m-meta    { font-size: 13px; color: var(--muted); margin-bottom: 20px; display: flex; gap: 14px; align-items: center; }
+    .m-summary { font-size: 15px; color: #e5e5ea; line-height: 1.6; margin-bottom: 24px; }
+    .m-tags    { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 24px; }
+    .m-tag     { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 12px; background: rgba(0,0,0,0.2); color: var(--muted); border: 1px solid var(--border); }
+    .m-divider { border: none; border-top: 1px solid var(--border); margin-bottom: 20px; }
+    .m-raw-label { font-size: 11px; font-weight: 700; color: var(--faint); margin-bottom: 10px; text-transform: uppercase; letter-spacing: .05em; }
+    .m-raw     { font-size: 14px; color: #aeaeae; line-height: 1.65; font-style: italic; background: rgba(0,0,0,0.15); padding: 14px; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.03); }
+    .m-close   { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.06); border: none; font-size: 16px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); cursor: pointer; }
+    .m-close:hover { color: var(--text); background: rgba(255,255,255,0.12); }
+
+    #settings-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 220; align-items: center; justify-content: center;
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    }
+    #settings-overlay.open { display: flex; }
+    #settings {
+      width: 90%; max-width: 460px; background: #2d2d2f; border: 1px solid var(--border);
+      border-radius: 16px; padding: 28px; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    #settings h3 { font-size: 18px; margin-bottom: 16px; font-weight: 700; letter-spacing: -0.01em; }
+    .settings-label { display: block; font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 8px; }
+    #api-key-input {
+      width: 100%; padding: 10px 14px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); background: rgba(0,0,0,0.15); color: var(--text);
+      margin-bottom: 14px; font-size: 14px;
+    }
+    #api-key-input:focus { outline: none; border-color: var(--accent); }
+    .settings-note { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 18px; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div>
+      <h2>second brain</h2>
+      <p>write anything — AI figures out the rest</p>
+    </div>
+    <div class="top-actions">
+      <button class="view-btn" id="web-toggle" onclick="toggleWebView()">web view</button>
+      <button class="icon-btn" onclick="openSettings()" title="API settings">⚙</button>
+      <button class="dots-btn" onclick="openPanel()">···</button>
+    </div>
+  </div>
+
+  <main id="main-view">
+    <div id="reminder" onclick="openReminderModal()">
+      <div class="r-label" id="r-label"></div>
+      <div class="r-title" id="r-title"></div>
+      <div class="r-summary" id="r-summary"></div>
+    </div>
+
+    <div class="search-row">
+      <div class="search-wrapper">
+        <input id="search-input" type="text" placeholder="search memories… use commas for multiple tags" oninput="toggleInlineClearBtn(this, 'search-clear-inline')" onkeydown="if(event.key==='Enter') search()" />
+        <button id="search-clear-inline" class="clear-inline-btn" onclick="clearSearchInputs()">×</button>
+      </div>
+      <button class="search-btn" onclick="search()">search</button>
+    </div>
+
+    <div class="filter-row">
+      <div class="segmented" id="timeline-filter">
+        <button class="active" onclick="setTimelineFilter('all')">all</button>
+        <button onclick="setTimelineFilter('today')">today</button>
+        <button onclick="setTimelineFilter('week')">week</button>
+        <button onclick="setTimelineFilter('month')">month</button>
+      </div>
+      <div class="filter-note" id="filter-note">showing all memories</div>
+    </div>
+
+    <div id="search-results">
+      <div class="sr-header">
+        <span id="search-label"></span>
+        <div class="sr-actions">
+          <button class="sr-web" onclick="showSearchInWeb()">show in web</button>
+          <button class="sr-clear" onclick="clearSearch()">clear</button>
+        </div>
+      </div>
+      <div id="results-list"></div>
+    </div>
+
+    <div id="tags-section">
+      <div class="collapsible-header" onclick="toggleTags()">
+        <span>top tags</span>
+        <span class="collapsible-chevron" id="tags-chevron">▾</span>
+      </div>
+      <div id="tags-body">
+        <div class="tag-cloud" id="tag-cloud"></div>
+      </div>
+    </div>
+
+    <textarea id="entry" placeholder="write about anything — a movie you watched, something you felt, a conversation that stuck…"></textarea>
+
+    <div class="btn-row">
+      <button class="btn" id="classify-btn" onclick="classify()">save memory</button>
+      <span id="status"></span>
+    </div>
+
+    <div id="saved-card"></div>
+  </main>
+
+  <section id="web-view" aria-label="Memory web view">
+    <div class="web-toolbar">
+      <div class="web-title-block">
+        <div class="web-title" id="web-title-editable" contenteditable="true" onblur="saveWebTitle()" onkeydown="handleWebTitleKey(event)">memory web</div>
+        <div class="web-hint">click title to edit · double-click node to open</div>
+      </div>
+      <div class="web-actions">
+        <div class="web-search-box">
+          <input id="web-search-input" type="text" placeholder="search within web…" oninput="toggleInlineClearBtn(this, 'web-search-clear-inline'); syncAndSearch(this.value);" />
+          <button id="web-search-clear-inline" class="clear-inline-btn" onclick="clearSearchInputs()">×</button>
+        </div>
+        
+        <div class="segmented" id="web-density-filter">
+          <button class="active" onclick="setDensityFilter('dense')">dense</button>
+          <button onclick="setDensityFilter('focused')">focused</button>
+        </div>
+
+        <div class="segmented" id="web-timeline-filter">
+          <button class="active" onclick="setTimelineFilter('all')">all</button>
+          <button onclick="setTimelineFilter('today')">today</button>
+          <button onclick="setTimelineFilter('week')">week</button>
+          <button onclick="setTimelineFilter('month')">month</button>
+        </div>
+        <button class="search-btn" onclick="resetWebLayout()">reset layout</button>
+      </div>
+    </div>
+    <div class="web-shell">
+      <svg id="web-svg" aria-label="Memory web diagram"></svg>
+      <div class="web-empty" id="web-empty">no memories in this timeline yet</div>
+      <div id="web-details"></div>
+    </div>
+  </section>
+
+  <div id="overlay" onclick="closePanel()"></div>
+
+  <div id="panel">
+    <h3>all memories</h3>
+    <button class="close-btn" onclick="closePanel()">×</button>
+    <div id="entries-list"></div>
+  </div>
+
+  <div id="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div id="modal">
+      <button class="m-close" onclick="closeModal()">×</button>
+      <div class="m-label" id="m-label"></div>
+      <div class="m-title" id="m-title"></div>
+      <div class="m-meta"  id="m-meta"></div>
+      <div class="m-summary" id="m-summary"></div>
+      <div class="m-tags"  id="m-tags"></div>
+      <hr class="m-divider">
+      <div class="m-raw-label">original entry</div>
+      <div class="m-raw"   id="m-raw"></div>
+    </div>
+  </div>
+
+  <div id="settings-overlay" onclick="if(event.target===this)closeSettings()">
+    <div id="settings">
+      <button class="m-close" onclick="closeSettings()">×</button>
+      <h3>API settings</h3>
+      <label class="settings-label" for="api-key-input">Groq API key</label>
+      <input id="api-key-input" type="password" placeholder="paste your Groq key here" />
+      <div class="settings-note">The key is stored only in this browser's local storage. Search and saving still have local fallbacks when no key is set.</div>
+      <button class="btn" onclick="saveApiKeySetting()">save key</button>
+      <button class="btn" onclick="clearApiKeySetting()">clear</button>
+      <span id="settings-status"></span>
+    </div>
+  </div>
+
+<script>
+  const API_KEY = "";
+  const $ = id => document.getElementById(id);
+  let _timelineFilter = localStorage.getItem("sb_timeline_filter") || "all";
+  let _densityFilter = localStorage.getItem("sb_density_filter") || "dense";
+  let _activeSearchQuery = "";
+  let _activeSearchIds = new Set();
+  let _debounceSearchTimeout = null;
+
+  // ZOOM AND PAN STATE
+  let _zoomTransform = { x: 0, y: 0, k: 1 };
+  let _isPanning = false;
+  let _panStart = { x: 0, y: 0 };
+
+  // ── tag alias map ──────────────────────────────────────────────
+  const TAG_ALIASES = {
+    "sad": "depressed", "lonely": "depressed", "numb": "depressed",
+    "cannot sleep": "depressed", "can't sleep": "depressed",
+    "insomnia": "depressed", "hopeless": "depressed", "empty": "depressed",
+    "low": "depressed", "down": "depressed", "melancholy": "depressed",
+    "stressed": "anxious", "nervous": "anxious", "worried": "anxious",
+    "overthinking": "anxious", "panic": "anxious", "restless": "anxious",
+    "frustrated": "angry", "irritated": "angry", "resentful": "angry",
+    "bitter": "angry",
+    "excited": "happy", "joyful": "happy", "elated": "happy",
+    "content": "happy", "grateful": "happy", "euphoric": "happy",
+    "realization": "growth", "lesson": "growth", "insight": "growth",
+    "self-awareness": "growth", "reflection": "growth", "clarity": "growth",
+    "friendship": "people", "family": "people", "relationship": "people",
+    "connection": "people", "social": "people",
+  };
+
+  function canonicalTag(tag) {
+    const t = tag.toLowerCase().trim();
+    return TAG_ALIASES[t] || t;
+  }
+
+  const MOOD_COLORS = {
+    anxious: "#ff9f0a",
+    happy: "#ffd60a",
+    angry: "#ff453a",
+    growth: "#30d158",
+    depressed: "#bf5af2",
+    people: "#0a84ff",
+    calm: "#5aa7a2",
+    neutral: "#aeaeae"
+  };
+
+  const SEARCH_EXPANSIONS = {
+    heartbreak: ["breakup", "sadness", "relationship", "ex", "loneliness", "loss", "betrayal", "moving on"],
+    stress: ["anxious", "pressure", "overthinking", "exam", "work", "college", "deadline", "restless"],
+    happy: ["joy", "grateful", "excited", "content", "calm", "friends", "good day"],
+    angry: ["frustrated", "irritated", "resentful", "fight", "argument", "unfair"],
+    growth: ["lesson", "realization", "clarity", "reflection", "change", "self-awareness"],
+    friends: ["friendship", "people", "connection", "hangout", "conversation", "support"],
+    family: ["people", "home", "parents", "relationship", "support", "conflict"],
+    college: ["exam", "study", "friends", "stress", "class", "future", "pressure"],
+    work: ["deadline", "stress", "meeting", "career", "pressure", "task"],
+    calm: ["peace", "relief", "quiet", "safe", "content", "grounded"]
+  };
+
+  // ── storage ────────────────────────────────────────────────────
+  function getEntries() { return JSON.parse(localStorage.getItem("sb_entries") || "[]"); }
+
+  function getPinnedIds() { return JSON.parse(localStorage.getItem("sb_pinned_entries") || "[]"); }
+  function isPinned(id) { return getPinnedIds().includes(Number(id)); }
+
+  function refreshWeb() { _webDirty = true; if (_webOpen) buildMemoryWeb(true); }
+  function refreshAll() { _panelDirty = true; refreshWeb(); if ($("tags-body").classList.contains("open")) buildTagCloud(); }
+
+  function togglePinned(id) {
+    const numericId = Number(id);
+    const pinned = new Set(getPinnedIds());
+    if (pinned.has(numericId)) pinned.delete(numericId);
+    else pinned.add(numericId);
+    localStorage.setItem("sb_pinned_entries", JSON.stringify([...pinned]));
+    _panelDirty = true;
+    refreshWeb();
+    renderPanel();
+  }
+
+  function entryTimestamp(entry) { return Number(entry.id) || Date.parse(entry.date) || 0; }
+
+  function getFilteredEntries() {
+    const entries = getEntries(); 
+    if (_timelineFilter === "all") return entries;
+    const now = Date.now();
+    const limits = {
+      today: 24 * 60 * 60 * 1000,
+      week: 7 * 24 * 60 * 60 * 1000,
+      month: 30 * 24 * 60 * 60 * 1000
+    };
+    return entries.filter(entry => now - entryTimestamp(entry) <= limits[_timelineFilter]);
+  }
+
+  function setTimelineFilter(filter) {
+    _timelineFilter = filter;
+    localStorage.setItem("sb_timeline_filter", filter);
+    syncTimelineControls();
+    refreshAll();
+    if (_activeSearchQuery) search();
+  }
+
+  function setDensityFilter(density) {
+    _densityFilter = density;
+    localStorage.setItem("sb_density_filter", density);
+    syncDensityControls();
+    refreshWeb();
+  }
+
+  function syncTimelineControls() {
+    document.querySelectorAll("#timeline-filter button, #web-timeline-filter button").forEach(b =>
+      b.classList.toggle("active", b.textContent.trim() === _timelineFilter));
+    const c = getFilteredEntries().length;
+    $("filter-note").textContent = `showing ${c} ${c === 1 ? "memory" : "memories"} · ${_timelineFilter === "all" ? "all memories" : "last " + _timelineFilter}`;
+  }
+
+  function syncDensityControls() {
+    document.querySelectorAll("#web-density-filter button").forEach(b =>
+      b.classList.toggle("active", b.textContent.trim() === _densityFilter));
+  }
+
+  function toggleInlineClearBtn(el, btnId) { $(btnId).style.display = el.value ? "block" : "none"; }
+
+  // ── prompts ────────────────────────────────────────────────────
+  const PROMPT = `You are a memory classifier for a private journaling app called "second brain".
+
+Analyze the journal entry below and return a JSON object that helps the user rediscover this memory later.
+
+Return ONLY valid JSON. No markdown, no backticks, no explanation.
+
+{
+  "title": string,
+  "tags": [string],
+  "importance": number,
+  "summary": string
+}
+
+TITLE
+- Max 8 words. Specific and memorable.
+- Capture the core event, emotion, or realization.
+- No generic titles like "My Day" or "Thoughts".
+
+TAGS
+- 5–10 lowercase tags.
+- Think like a human: include topic, emotion, experience type, relationships, places/names, life area, broader theme.
+- Lean inferential when strongly implied — a memory can be positive and negative simultaneously.
+- Do NOT repeat the title words verbatim as tags.
+
+IMPORTANCE (integer 0–10)
+- Judge from the writer's perspective, not objective significance.
+- 0–2: trivial, routine
+- 3–4: mildly interesting or useful
+- 5–6: emotionally meaningful
+- 7–8: significant — strong emotion, important realization, first experience
+- 9–10: life-changing, traumatic, deep heartbreak, or anything that keeps the writer up for weeks
+- Short or low-context entries default to 1–3 unless words carry obvious emotional weight.
+
+SUMMARY
+- 2–4 sentences scaled to importance.
+- Focus on the most prominent emotions and tone.
+- No filler. Make it feel like something worth reading months from now.
+
+Entry:
+`;
+
+  const SEARCH_PROMPT = `You are a search assistant for a personal memory app.
+
+The user typed a search query. Expand it into related tags that might appear in journal entries on this topic.
+
+Think humanly: include emotions, synonyms, related experiences, and themes.
+
+Return ONLY a valid JSON array of 10–15 lowercase strings. No explanation, no markdown, no backticks.
+
+Example: "heartbreak" → ["heartbreak","breakup","sadness","crying","ex","loneliness","emotional pain","betrayal","loss","moving on","relationship"]
+
+Query: `;
+
+  function clearSearchInputs() {
+    $("search-input").value = $("web-search-input").value = "";
+    $("search-clear-inline").style.display = $("web-search-clear-inline").style.display = "none";
+    clearSearch();
+  }
+
+  function syncAndSearch(val) {
+    $("search-input").value = val;
+    toggleInlineClearBtn($("search-input"), "search-clear-inline");
+    clearTimeout(_debounceSearchTimeout);
+    _debounceSearchTimeout = setTimeout(() => val.trim() ? search(true) : clearSearch(), 400);
+  }
+
+  // ── customizable title methods ──────────────────────────────────
+  function loadWebTitle() { $("web-title-editable").textContent = localStorage.getItem("sb_web_custom_title") || "memory web"; }
+
+  function saveWebTitle() {
+    const el = $("web-title-editable");
+    const text = el.textContent.trim() || "memory web";
+    el.textContent = text;
+    localStorage.setItem("sb_web_custom_title", text);
+  }
+
+  function handleWebTitleKey(e) { if (e.key === "Enter") { e.preventDefault(); $("web-title-editable").blur(); } }
+
+  function saveEntry(raw, result) {
+    const entries = getEntries();
+    entries.unshift({ id: Date.now(), date: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }), raw, ...result });
+    localStorage.setItem("sb_entries", JSON.stringify(entries));
+  }
+
+  // ── helpers ────────────────────────────────────────────────────
+  function impColor(s) { return s >= 8 ? "var(--red)" : s >= 5 ? "var(--orange)" : "var(--green)"; }
+  function impDot(s) { return `<span class="imp-dot" style="background:${impColor(s)}"></span>`; }
+  function escapeHTML(v) { return String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+  function getApiKey() { return localStorage.getItem("sb_groq_api_key") || API_KEY || ""; }
+
+  const MOOD_CHECKS = [
+    ["angry", ["angry", "frustrated", "resentful", "fight", "argument"]],
+    ["anxious", ["anxious", "stress", "stressed", "worried", "panic", "overthinking"]],
+    ["depressed", ["depressed", "sad", "lonely", "empty", "hopeless"]],
+    ["growth", ["growth", "lesson", "realization", "clarity", "reflection"]],
+    ["happy", ["happy", "grateful", "excited", "joy", "content"]],
+    ["calm", ["calm", "peace", "relief", "quiet"]],
+    ["people", ["people", "friends", "friendship", "family", "relationship"]]
+  ];
+
+  function moodForEntry(entry) {
+    const tags = (entry.tags || []).map(canonicalTag);
+    const text = `${entry.title || ""} ${entry.summary || ""} ${entry.raw || ""}`.toLowerCase();
+    const found = MOOD_CHECKS.find(([, words]) => words.some(w => tags.includes(canonicalTag(w)) || text.includes(w)));
+    return found ? found[0] : "neutral";
+  }
+
+  function moodColor(entry) { return MOOD_COLORS[moodForEntry(entry)] || MOOD_COLORS.neutral; }
+
+  function expandedQueryTerms(query) {
+    const base = query.toLowerCase().split(/\s+/).map(canonicalTag).filter(Boolean);
+    const expanded = new Set(base);
+    base.forEach(term => {
+      (SEARCH_EXPANSIONS[term] || []).forEach(word => expanded.add(canonicalTag(word)));
+      Object.entries(SEARCH_EXPANSIONS).forEach(([key, words]) => {
+        if (words.map(canonicalTag).includes(term)) expanded.add(canonicalTag(key));
+      });
+    });
+    return [...expanded];
+  }
+
+  /* split comma-separated query into individual tag queries */
+  function parseMultiTagQuery(rawQuery) {
+    return rawQuery.split(",").map(t => t.trim()).filter(Boolean);
+  }
+
+  function callGroq(prompt) {
+    const key = getApiKey();
+    if (!key) return Promise.reject(new Error("missing API key"));
+    return fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: [{ role: "user", content: prompt }], temperature: 0.4 })
+    }).then(r => r.json()).then(d => d.choices?.[0]?.message?.content);
+  }
+
+  function parseJSON(raw) { return JSON.parse(raw.replace(/```json|```/g, "").trim()); }
+
+  // ── tag cloud ──────────────────────────────────────────────────
+  function buildTagCloud() {
+    const freq = {};
+    getFilteredEntries().forEach(e => (e.tags || []).forEach(t => { const c = canonicalTag(t); freq[c] = (freq[c] || 0) + 1; }));
+    const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 20);
+    const cloud = $("tag-cloud");
+    if (!sorted.length) { cloud.innerHTML = `<span class="tags-empty">no tags yet — save a memory first</span>`; return; }
+    const max = sorted[0][1];
+    cloud.innerHTML = sorted.map(([tag, count]) =>
+      `<span class="tag-pill${count >= max * 0.6 ? " tag-lg" : ""}" onclick="searchTag('${tag}')">${tag} <span class="tag-count">${count}</span></span>`
+    ).join("");
+  }
+
+  function toggleTags() {
+    const isOpen = $("tags-body").classList.toggle("open");
+    $("tags-chevron").classList.toggle("open", isOpen);
+    if (isOpen) buildTagCloud();
+  }
+
+  function searchTag(tag) {
+    $("search-input").value = $("web-search-input").value = tag;
+    toggleInlineClearBtn($("search-input"), "search-clear-inline");
+    toggleInlineClearBtn($("web-search-input"), "web-search-clear-inline");
+    search();
+  }
+
+  // ── modal ──────────────────────────────────────────────────────
+  let _reminderEntry = null;
+
+  function openModal(e) {
+    $("m-label").textContent = "📍 " + e.date;
+    $("m-title").textContent = e.title;
+    $("m-meta").innerHTML = `${impDot(e.importance)}<span>${e.importance}/10 importance</span><span class="mood-chip" style="color:${moodColor(e)}">${moodForEntry(e)}</span>`;
+    $("m-summary").textContent = e.summary;
+    $("m-tags").innerHTML = (e.tags || []).map(t => `<span class="m-tag">${t}</span>`).join("");
+    $("m-raw").textContent = e.raw;
+    $("modal-overlay").classList.add("open");
+  }
+
+  function openReminderModal() { if (_reminderEntry) openModal(_reminderEntry); }
+  function closeModal() { $("modal-overlay").classList.remove("open"); }
+
+  function showReminder() {
+    const entries = getFilteredEntries();
+    if (entries.length < 3) return;
+    const entry = entries[Math.floor(Math.random() * entries.length)];
+    const d = Math.floor((Date.now() - entry.id) / 86400000);
+    $("r-label").textContent = "📍 " + (d === 0 ? "you wrote this earlier today" : d === 1 ? "from yesterday" : `${d} days ago`);
+    $("r-title").textContent = entry.title;
+    $("r-summary").textContent = entry.summary;
+    $("reminder").style.display = "block";
+    _reminderEntry = entry;
+  }
+
+  function deleteEntry(id) {
+    localStorage.setItem("sb_entries", JSON.stringify(getEntries().filter(e => e.id !== id)));
+    localStorage.setItem("sb_pinned_entries", JSON.stringify(getPinnedIds().filter(p => p !== Number(id))));
+    refreshWeb();
+    renderPanel();
+  }
+
+  // ── panel ──────────────────────────────────────────────────────
+  let _panelDirty = true;
+
+  function renderPanel() {
+    const entries = getFilteredEntries();
+    const list = $("entries-list");
+    _panelDirty = false;
+    if (!entries.length) { list.innerHTML = `<p class="panel-empty">no memories yet — save something first</p>`; return; }
+    list.innerHTML = entries.map(e => `
+      <div class="card" style="border-left-color:${moodColor(e)}" onclick='openModal(${JSON.stringify(e).replace(/'/g, "&#39;")})'>
+        <button class="pin-btn${isPinned(e.id) ? " pinned" : ""}" onclick="event.stopPropagation(); togglePinned(${e.id})" title="pin memory">★</button>
+        <button class="delete-btn" onclick="event.stopPropagation(); deleteEntry(${e.id})" title="delete">×</button>
+        <div class="card-title">${escapeHTML(e.title)}</div>
+        <div class="card-meta"><span>${escapeHTML(e.date)} · ${moodForEntry(e)}</span><span>${isPinned(e.id) ? "pinned · " : ""}${impDot(e.importance)}${e.importance}/10</span></div>
+        <div class="card-tags">${(e.tags || []).slice(0, 4).map(t => `<span class="card-tag">${escapeHTML(t)}</span>`).join("")}</div>
+      </div>`).join("");
+  }
+
+  function openPanel() { if (_panelDirty) renderPanel(); $("panel").classList.add("open"); $("overlay").classList.add("open"); }
+  function closePanel() { $("panel").classList.remove("open"); $("overlay").classList.remove("open"); }
+
+  // ── search ─────────────────────────────────────────────────────
+  async function search(suppressUIUpdate = false) {
+    const rawQuery = $("search-input").value.trim();
+    if (!rawQuery) return;
+    _activeSearchQuery = rawQuery;
+    const entries = getFilteredEntries();
+    const tagQueries = parseMultiTagQuery(rawQuery);
+    if (!entries.length || !tagQueries.length) { showSearchResults([], rawQuery, "local", suppressUIUpdate); return; }
+
+    if (!suppressUIUpdate) {
+      $("search-label").textContent = "searching…";
+      $("search-results").style.display = "block";
+      $("results-list").innerHTML = "";
+    }
+
+    /* For each comma-separated tag, build its expanded term set */
+    let source = "local";
+    const perTagTerms = [];
+    for (const tq of tagQueries) {
+      try {
+        const raw = await callGroq(SEARCH_PROMPT + tq);
+        const aiTerms = parseJSON(raw).map(canonicalTag);
+        source = "AI + local";
+        perTagTerms.push([...new Set([...expandedQueryTerms(tq), ...aiTerms])]);
+      } catch (err) {
+        perTagTerms.push(expandedQueryTerms(tq));
+      }
+    }
+    showSearchResults(scoreEntriesMultiTag(entries, tagQueries, perTagTerms), rawQuery, source, suppressUIUpdate);
+  }
+
+  /* score entry against one tag query — returns 0 if no match */
+  function scoreOneTag(e, q, terms, canonical, haystack) {
+    return ((e.title || "").toLowerCase().includes(q) ? 3 : 0)
+      + ((e.summary || "").toLowerCase().includes(q) ? 2 : 0)
+      + ((e.raw || "").toLowerCase().includes(q) ? 1 : 0)
+      + canonical.filter(t => terms.some(st => t.includes(st) || st.includes(t))).length * 2
+      + terms.filter(t => haystack.includes(t)).length;
+  }
+
+  /* entries must match EVERY comma-separated tag to appear */
+  function scoreEntriesMultiTag(entries, tagQueries, perTagTerms) {
+    return entries.map(e => {
+      const canonical = (e.tags || []).map(canonicalTag);
+      const haystack = `${e.title || ""} ${e.summary || ""} ${e.raw || ""}`.toLowerCase();
+      let total = 0;
+      for (let i = 0; i < tagQueries.length; i++) {
+        const s = scoreOneTag(e, tagQueries[i].toLowerCase(), perTagTerms[i], canonical, haystack);
+        if (!s) return { ...e, score: 0 };
+        total += s;
+      }
+      return { ...e, score: total };
+    }).filter(e => e.score > 0).sort((a, b) => b.score - a.score || b.importance - a.importance);
+  }
+
+  function showSearchResults(results, query, source = "local", suppressUIUpdate = false) {
+    _activeSearchIds = new Set(results.map(e => Number(e.id)));
+    refreshWeb();
+    if (suppressUIUpdate) return;
+    const pills = parseMultiTagQuery(query).map(t => `<span class="card-tag" style="font-size:0.85em">${escapeHTML(t)}</span>`).join(" ");
+    $("search-results").style.display = "block";
+    $("search-label").innerHTML = results.length
+      ? `${results.length} memor${results.length === 1 ? "y" : "ies"} matching ${pills} · ${source}`
+      : `no memories found for ${pills}`;
+    $("results-list").innerHTML = results.map(e => `
+      <div class="card" style="border-left-color:${moodColor(e)}" onclick='openModal(${JSON.stringify(e).replace(/'/g, "&#39;")})'>
+        <button class="pin-btn${isPinned(e.id) ? " pinned" : ""}" onclick="event.stopPropagation(); togglePinned(${e.id})" title="pin memory">★</button>
+        <div class="card-title">${escapeHTML(e.title)}</div>
+        <div class="card-meta"><span>${escapeHTML(e.date)} · ${moodForEntry(e)}</span><span>${impDot(e.importance)}${e.importance}/10 · match ${e.score}</span></div>
+        <div class="card-tags">${(e.tags || []).slice(0, 5).map(t => `<span class="card-tag">${escapeHTML(t)}</span>`).join("")}</div>
+      </div>`).join("");
+  }
+
+  function clearSearch() {
+    _activeSearchQuery = "";
+    _activeSearchIds = new Set();
+    refreshWeb();
+    $("search-results").style.display = "none";
+    $("results-list").innerHTML = "";
+  }
+
+  function showSearchInWeb() { _webOpen ? buildMemoryWeb(true) : toggleWebView(); }
+
+  // spider web view
+  let _webOpen = false;
+  let _webDirty = true;
+  let _webNodes = [];
+  let _webLinks = [];
+  let _webSelected = null;
+  let _webHovered = null;
+  let _webDragging = null;
+  let _webPointer = { x: 0, y: 0 };
+  let _webAnimation = null;
+
+  function toggleWebView() {
+    _webOpen = !_webOpen;
+    document.body.classList.toggle("web-mode", _webOpen);
+    $("main-view").classList.toggle("hidden", _webOpen);
+    $("web-view").classList.toggle("open", _webOpen);
+    $("web-toggle").classList.toggle("active", _webOpen);
+    $("web-toggle").textContent = _webOpen ? "write view" : "web view";
+    if (_webOpen) {
+      $("web-search-input").value = $("search-input").value;
+      toggleInlineClearBtn($("web-search-input"), "web-search-clear-inline");
+      syncDensityControls(); closePanel(); buildMemoryWeb(); startWebAnimation();
+    } else { stopWebAnimation(); hideWebDetails(); }
+  }
+
+  function resetWebLayout() {
+    _zoomTransform = { x: 0, y: 0, k: 1 };
+    _webDirty = true;
+    buildMemoryWeb(true);
+  }
+
+  function buildMemoryWeb(forceReset = false) {
+    if (!_webOpen && !forceReset) return;
+    if (!_webDirty && !forceReset) { resizeWebSurface(); return; }
+    const svg = $("web-svg");
+    const shell = svg.parentElement;
+    resizeWebSurface();
+
+    const entries = getFilteredEntries();
+    $("web-empty").classList.toggle("open", !entries.length);
+
+    const width = shell.clientWidth || 640;
+    const height = shell.clientHeight || 460;
+    const cx = width / 2;
+    const cy = height / 2;
+    const nodes = [];
+    const links = [];
+    const tagNodes = new Map();
+    const memoryNodes = new Map();
+    const tagPairs = new Map();
+
+    // ── DYNAMIC BUBBLE SCALING ──
+    let tagGlobalCounts = {};
+    const densityFactor = entries.length > 200 ? 0.40 : entries.length > 80 ? 0.60 : 1.0;
+
+    entries.forEach(e => {
+      (e.tags || []).map(canonicalTag).forEach(t => {
+        tagGlobalCounts[t] = (tagGlobalCounts[t] || 0) + 1;
+      });
+    });
+
+    entries.forEach((entry, index) => {
+      // Fermat's spiral for even distribution without overlapping
+      const goldenAngle = 2.39996323; // 137.5 degrees in radians
+      const angle = index * goldenAngle;
+      // 45 pixels per step ensures they never spawn on each other.
+      const radius = Math.sqrt(index + 1) * 45;
+      
+      const baseRadius = 9 + Number(entry.importance || 1) * 2.2 + (isPinned(entry.id) ? 5 : 0);
+      const calculatedRadius = Math.max(6, Math.min(34, baseRadius)) * densityFactor;
+
+      const memoryNode = {
+        id: "memory-" + entry.id,
+        type: "memory",
+        label: entry.title || "untitled memory",
+        entry,
+        x: cx + Math.cos(angle) * radius,
+        y: cy + Math.sin(angle) * radius,
+        vx: 0,
+        vy: 0,
+        r: calculatedRadius,
+        mood: moodForEntry(entry),
+        color: moodColor(entry),
+        pinned: isPinned(entry.id),
+        searchMatch: _activeSearchIds.has(Number(entry.id)),
+        fixed: false
+      };
+      nodes.push(memoryNode);
+      memoryNodes.set(entry.id, memoryNode);
+
+      let canonicalTags = [...new Set((entry.tags || []).map(canonicalTag).filter(Boolean))];
+      
+      if (_densityFilter === "focused") {
+        canonicalTags = canonicalTags.filter(tag => (tagGlobalCounts[tag] || 0) >= 3);
+      } else {
+        canonicalTags = canonicalTags.slice(0, 3);
+      }
+
+      canonicalTags.forEach((tag, tagIndex) => {
+        if (!tagNodes.has(tag)) {
+          const tagAngle = angle + (tagIndex - canonicalTags.length / 2) * 0.42;
+          const tagRadius = radius + 60; // place tags slightly outside the memory
+          const tagNode = {
+            id: "tag-" + tag,
+            type: "tag",
+            label: tag,
+            count: 0,
+            x: cx + Math.cos(tagAngle) * tagRadius,
+            y: cy + Math.sin(tagAngle) * tagRadius,
+            vx: 0,
+            vy: 0,
+            r: 9 * densityFactor,
+            fixed: false
+          };
+          tagNodes.set(tag, tagNode);
+          nodes.push(tagNode);
+        }
+
+        const tagNode = tagNodes.get(tag);
+        tagNode.count += 1;
+        tagNode.r = Math.min(20, 8 + tagNode.count * 2) * densityFactor;
+        links.push({ source: memoryNode, target: tagNode, type: "memory-tag", strength: 0.005 });
+      });
+
+      for (let i = 0; i < canonicalTags.length; i++) {
+        for (let j = i + 1; j < canonicalTags.length; j++) {
+          const pair = [canonicalTags[i], canonicalTags[j]].sort().join("|");
+          tagPairs.set(pair, (tagPairs.get(pair) || 0) + 1);
+        }
+      }
+    });
+
+    tagPairs.forEach((count, pair) => {
+      if (count < 2) return;
+      const [a, b] = pair.split("|");
+      if (tagNodes.has(a) && tagNodes.has(b)) {
+        links.push({ source: tagNodes.get(a), target: tagNodes.get(b), type: "tag-tag", strength: 0.002, count });
+      }
+    });
+
+    // Bipartite graph: memories connect only via shared tags, no memory-memory links.
+
+    _webNodes = nodes;
+    _webLinks = links;
+    _webDirty = false;
+    tickWeb(140, 0.55);
+    drawWeb();
+  }
+
+  function resizeWebSurface() {
+    const r = $("web-svg").getBoundingClientRect();
+    if (r.width && r.height) $("web-svg").setAttribute("viewBox", `0 0 ${r.width} ${r.height}`);
+  }
+
+  function startWebAnimation() {
+    if (_webAnimation) return;
+    const frame = () => {
+      tickWeb(1, 0.16);
+      drawWeb();
+      _webAnimation = requestAnimationFrame(frame);
+    };
+    _webAnimation = requestAnimationFrame(frame);
+  }
+
+  function stopWebAnimation() {
+    if (_webAnimation) cancelAnimationFrame(_webAnimation);
+    _webAnimation = null;
+  }
+
+  function tickWeb(steps, motion = 1) {
+    const r = $("web-svg").getBoundingClientRect();
+    const cX = (r.width || 640) / 2, cY = (r.height || 460) / 2;
+    const dense = _webNodes.length > 150;
+    const grav = dense ? 0.000005 : 0.00018;
+    const repF = dense ? 50 : 15;
+
+    for (let step = 0; step < steps; step++) {
+      // Links
+      _webLinks.forEach(l => {
+        const dx = l.target.x - l.source.x, dy = l.target.y - l.source.y;
+        const dist = Math.max(1, Math.hypot(dx, dy));
+        let desired = l.type === "memory-tag" ? 160 : l.type === "tag-tag" ? 220 : 280;
+        if (dense) desired *= 2.5;
+        const f = (dist - desired) * l.strength, fx = (dx / dist) * f * motion, fy = (dy / dist) * f * motion;
+        if (!l.source.fixed) { l.source.vx += fx; l.source.vy += fy; }
+        if (!l.target.fixed) { l.target.vx -= fx; l.target.vy -= fy; }
+      });
+
+      // Collision + repulsion
+      for (let i = 0; i < _webNodes.length; i++) {
+        for (let j = i + 1; j < _webNodes.length; j++) {
+          const a = _webNodes[i], b = _webNodes[j];
+          const dx = b.x - a.x, dy = b.y - a.y;
+          const dist = Math.max(0.1, Math.hypot(dx, dy));
+          const minD = a.r + b.r + 4;
+          if (dist < minD) {
+            const p = ((minD - dist) / dist) * 0.425; // 0.5 * 0.85
+            const px = dx * p, py = dy * p;
+            if (!a.fixed) { a.x -= px; a.y -= py; a.vx -= px * 0.05; a.vy -= py * 0.05; }
+            if (!b.fixed) { b.x += px; b.y += py; b.vx += px * 0.05; b.vy += py * 0.05; }
+          } else if (dist < 500) {
+            const rep = (a.r + b.r + 40) / (dist * dist) * repF * motion;
+            const fx = (dx / dist) * rep, fy = (dy / dist) * rep;
+            if (!a.fixed) { a.vx -= fx; a.vy -= fy; }
+            if (!b.fixed) { b.vx += fx; b.vy += fy; }
+          }
+        }
+      }
+
+      // Gravity + friction
+      _webNodes.forEach(n => {
+        if (n.fixed) return;
+        n.vx += (cX - n.x) * grav * motion;
+        n.vy += (cY - n.y) * grav * motion;
+        n.vx *= 0.72; n.vy *= 0.72;
+        n.x += n.vx; n.y += n.vy;
+      });
+    }
+  }
+
+  function drawWeb() {
+    const svg = $("web-svg");
+    const r = svg.getBoundingClientRect();
+    svg.setAttribute("viewBox", `0 0 ${r.width || 640} ${r.height || 460}`);
+    svg.innerHTML = "";
+
+    const active = _webSelected || _webHovered;
+    const activeIds = new Set();
+    if (active) {
+      activeIds.add(active.id);
+      _webLinks.forEach(link => {
+        if (link.source === active || link.target === active) {
+          activeIds.add(link.source.id);
+          activeIds.add(link.target.id);
+        }
+      });
+    }
+
+    const searchActive = _activeSearchIds.size > 0;
+    const ns = "http://www.w3.org/2000/svg";
+
+    // MASTER ZOOM CONTAINER
+    const masterContainer = document.createElementNS(ns, "g");
+    masterContainer.setAttribute("transform", `translate(${_zoomTransform.x}, ${_zoomTransform.y}) scale(${_zoomTransform.k})`);
+    svg.appendChild(masterContainer);
+
+    const linkLayer = document.createElementNS(ns, "g");
+    const nodeLayer = document.createElementNS(ns, "g");
+    masterContainer.append(linkLayer, nodeLayer);
+
+    _webLinks.forEach(link => {
+      // Only show a link if a node is actively hovered/selected AND this link connects to it
+      const connectedToActive = active && (activeIds.has(link.source.id) && activeIds.has(link.target.id));
+      const searchHighlighted = searchActive && (link.source.searchMatch || link.target.searchMatch);
+      const visible = connectedToActive || searchHighlighted;
+
+      if (!visible) return; // Don't even create the DOM element — fully hidden
+
+      const line = document.createElementNS(ns, "line");
+      line.setAttribute("class", "web-link");
+      line.setAttribute("x1", link.source.x);
+      line.setAttribute("y1", link.source.y);
+      line.setAttribute("x2", link.target.x);
+      line.setAttribute("y2", link.target.y);
+      line.setAttribute("stroke", link.type === "memory-tag"
+        ? "rgba(232,230,224,0.8)"
+        : link.type === "tag-tag"
+          ? "rgba(48,209,88,0.8)"
+          : "rgba(214,140,69,0.8)");
+      line.setAttribute("stroke-width", "2.5");
+      linkLayer.appendChild(line);
+    });
+
+    _webNodes.forEach(node => {
+      const nodeGroup = document.createElementNS(ns, "g");
+      const isMemory = node.type === "memory";
+      const searchMatch = isMemory && node.searchMatch;
+      const connectedToSearch = node.type === "tag" && _webLinks.some(link =>
+        (link.source === node && link.target.searchMatch) || (link.target === node && link.source.searchMatch)
+      );
+      const highlighted = (!active || activeIds.has(node.id)) && (!searchActive || searchMatch || connectedToSearch);
+      nodeGroup.setAttribute("opacity", highlighted ? "1" : "0.35");
+
+      if (node.pinned) {
+        const ring = document.createElementNS(ns, "circle");
+        ring.setAttribute("class", "web-node");
+        ring.setAttribute("cx", node.x);
+        ring.setAttribute("cy", node.y);
+        ring.setAttribute("r", node.r + 6);
+        ring.setAttribute("fill", "none");
+        ring.setAttribute("stroke", "rgba(255,214,10,0.5)");
+        ring.setAttribute("stroke-width", "1.5");
+        nodeGroup.appendChild(ring);
+      }
+
+      const circle = document.createElementNS(ns, "circle");
+      circle.setAttribute("class", "web-node");
+      circle.setAttribute("cx", node.x);
+      circle.setAttribute("cy", node.y);
+      circle.setAttribute("r", node.r);
+      circle.setAttribute("fill", isMemory ? node.color : "#2f6f52");
+      circle.setAttribute("stroke", searchMatch ? "#f5f5f7" : node === _webSelected ? "#f5f5f7" : node.pinned ? "#ffd60a" : "rgba(245,245,247,0.3)");
+      circle.setAttribute("stroke-width", searchMatch ? "4" : node === _webSelected ? "2" : node.pinned ? "2" : "1");
+      nodeGroup.appendChild(circle);
+
+      if (node.pinned) {
+        const star = document.createElementNS(ns, "text");
+        star.setAttribute("x", node.x);
+        star.setAttribute("y", node.y + 4);
+        star.setAttribute("text-anchor", "middle");
+        star.setAttribute("fill", "#f5f5f7");
+        star.setAttribute("font-size", "13");
+        star.setAttribute("pointer-events", "none");
+        star.textContent = "★";
+        nodeGroup.appendChild(star);
+      }
+
+      const scaleThreshold = _webNodes.length > 150 ? 1.4 : 0.8;
+      if (_zoomTransform.k > scaleThreshold || node === _webHovered || node === _webSelected || node.pinned || searchMatch) {
+        svgLabel(nodeGroup, node.label, node.x, node.y + node.r + 8, isMemory ? 96 : 76, isMemory ? 12 : 11, isMemory ? "#f5f5f7" : "#b9d7c5");
+      }
+      nodeLayer.appendChild(nodeGroup);
+    });
+  }
+
+  function svgLabel(parent, text, x, y, maxWidth, fontSize, fill) {
+    const ns = "http://www.w3.org/2000/svg";
+    const words = String(text || "").split(/\s+/).slice(0, 5);
+    const approxChars = Math.max(8, Math.floor(maxWidth / (fontSize * 0.56)));
+    const lines = [];
+    let line = "";
+    words.forEach(word => {
+      const test = line ? line + " " + word : word;
+      if (test.length > approxChars && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    });
+    if (line) lines.push(line);
+
+    lines.slice(0, 2).forEach((label, index) => {
+      const textNode = document.createElementNS(ns, "text");
+      textNode.setAttribute("class", "web-label");
+      textNode.setAttribute("x", x);
+      textNode.setAttribute("y", y + index * (fontSize + 3));
+      textNode.setAttribute("text-anchor", "middle");
+      textNode.setAttribute("font-size", fontSize);
+      textNode.setAttribute("fill", fill);
+      textNode.textContent = label;
+      parent.appendChild(textNode);
+    });
+  }
+
+  function webNodeAt(x, y) {
+    for (let i = _webNodes.length - 1; i >= 0; i--) {
+      const node = _webNodes[i];
+      if (Math.hypot(node.x - x, node.y - y) <= node.r + 8) return node;
+    }
+    return null;
+  }
+
+  function showWebDetails(node) {
+    const d = $("web-details");
+    if (!node) { d.classList.remove("open"); return; }
+    d.classList.add("open");
+    if (node.type === "memory") {
+      const e = node.entry;
+      d.innerHTML = `<div class="wd-kicker">memory</div><div class="wd-title">${escapeHTML(e.title)}</div>
+        <div class="wd-meta">${escapeHTML(e.date)} · ${e.importance}/10 importance · ${node.mood}<br>${escapeHTML(e.summary)}</div>
+        <div class="wd-tags">${(e.tags || []).slice(0, 8).map(t => `<span class="wd-tag">${escapeHTML(t)}</span>`).join("")}</div>
+        <div class="wd-actions"><button onclick="togglePinned(${e.id})">${node.pinned ? "unpin" : "pin"} memory</button>
+          <button onclick='openModal(${JSON.stringify(e).replace(/'/g, "&#39;")})'>open</button></div>`;
+    } else {
+      const rel = _webLinks.filter(l => l.source === node || l.target === node)
+        .map(l => l.source === node ? l.target : l.source).filter(n => n.type === "memory").slice(0, 4).map(n => n.label);
+      d.innerHTML = `<div class="wd-kicker">tag</div><div class="wd-title">#${escapeHTML(node.label)}</div>
+        <div class="wd-meta">${node.count} linked memor${node.count === 1 ? "y" : "ies"}${rel.length ? "<br>" + escapeHTML(rel.join(", ")) : ""}</div>`;
+    }
+  }
+
+  function hideWebDetails() { $("web-details").classList.remove("open"); }
+
+  function svgLocal(e) {
+    const r = $("web-svg").getBoundingClientRect();
+    return { x: (e.clientX - r.left - _zoomTransform.x) / _zoomTransform.k, y: (e.clientY - r.top - _zoomTransform.y) / _zoomTransform.k };
+  }
+
+  function setupWebEvents() {
+    const svg = $("web-svg");
+    if (!svg) return;
+
+    svg.addEventListener("wheel", e => {
+      e.preventDefault();
+      const r = svg.getBoundingClientRect();
+      const mx = e.clientX - r.left, my = e.clientY - r.top;
+      let nk = Math.max(0.15, Math.min(8, _zoomTransform.k * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));
+      _zoomTransform.x = mx - (mx - _zoomTransform.x) * (nk / _zoomTransform.k);
+      _zoomTransform.y = my - (my - _zoomTransform.y) * (nk / _zoomTransform.k);
+      _zoomTransform.k = nk;
+      drawWeb();
+    }, { passive: false });
+
+    svg.addEventListener("pointerdown", e => {
+      const { x, y } = svgLocal(e);
+      const node = webNodeAt(x, y);
+      if (node) {
+        _webDragging = _webSelected = node;
+        node.fixed = true;
+        _webPointer = { x, y };
+        showWebDetails(node);
+      } else {
+        _isPanning = true;
+        _panStart = { x: e.clientX - _zoomTransform.x, y: e.clientY - _zoomTransform.y };
+      }
+      svg.setPointerCapture(e.pointerId);
+      svg.classList.add("dragging");
+      drawWeb();
+    });
+
+    svg.addEventListener("pointermove", e => {
+      const { x, y } = svgLocal(e);
+      if (_webDragging) {
+        _webDragging.x = x; _webDragging.y = y; _webDragging.vx = _webDragging.vy = 0;
+        showWebDetails(_webDragging); drawWeb(); return;
+      }
+      if (_isPanning) {
+        _zoomTransform.x = e.clientX - _panStart.x; _zoomTransform.y = e.clientY - _panStart.y;
+        drawWeb(); return;
+      }
+      const h = webNodeAt(x, y);
+      if (h !== _webHovered) { _webHovered = h; if (!_webSelected) showWebDetails(h); drawWeb(); }
+    });
+
+    svg.addEventListener("pointerup", e => {
+      if (svg.hasPointerCapture(e.pointerId)) svg.releasePointerCapture(e.pointerId);
+      svg.classList.remove("dragging");
+      if (_webDragging) { _webDragging.fixed = false; _webDragging = null; }
+      _isPanning = false;
+    });
+
+    svg.addEventListener("click", e => {
+      const { x, y } = svgLocal(e);
+      const node = webNodeAt(x, y);
+      if (!node) { _webSelected = null; hideWebDetails(); drawWeb(); return; }
+      _webSelected = node; showWebDetails(node);
+    });
+
+    svg.addEventListener("dblclick", e => {
+      const { x, y } = svgLocal(e);
+      const node = webNodeAt(x, y);
+      if (node?.type === "memory") openModal(node.entry);
+    });
+
+    window.addEventListener("resize", () => { if (_webOpen) { resizeWebSurface(); drawWeb(); } });
+  }
+
+  function openSettings() { $("api-key-input").value = getApiKey(); $("settings-status").textContent = ""; $("settings-overlay").classList.add("open"); }
+  function closeSettings() { $("settings-overlay").classList.remove("open"); }
+
+  function saveApiKeySetting() {
+    const key = $("api-key-input").value.trim();
+    key ? localStorage.setItem("sb_groq_api_key", key) : localStorage.removeItem("sb_groq_api_key");
+    $("settings-status").textContent = " saved";
+  }
+
+  function clearApiKeySetting() {
+    localStorage.removeItem("sb_groq_api_key");
+    $("api-key-input").value = "";
+    $("settings-status").textContent = " cleared";
+  }
+
+  function localClassify(entryText) {
+    const lower = entryText.toLowerCase();
+    const words = lower.match(/[a-z0-9']+/g) || [];
+    const stop = new Set(["the", "and", "that", "this", "with", "about", "from", "have", "was", "were", "feel", "felt", "just", "like", "when", "then", "there", "their", "because", "after", "before"]);
+    const freq = {};
+    words.forEach(word => {
+      if (word.length > 2 && !stop.has(word)) freq[word] = (freq[word] || 0) + 1;
+    });
+    const inferred = [];
+    Object.entries(SEARCH_EXPANSIONS).forEach(([tag, related]) => {
+      if (lower.includes(tag) || related.some(word => lower.includes(word))) inferred.push(tag);
+    });
+    const mood = moodForEntry({ title: "", summary: entryText, raw: entryText, tags: inferred });
+    if (mood !== "neutral") inferred.push(mood);
+    const keywords = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([word]) => canonicalTag(word));
+    const tags = [...new Set([...inferred, ...keywords])].slice(0, 10);
+    const titleWords = entryText.replace(/\s+/g, " ").trim().split(" ").slice(0, 7).join(" ");
+    const emotionalWords = ["love", "hate", "cry", "cried", "angry", "happy", "anxious", "sad", "excited", "afraid", "proud", "hurt", "important"];
+    const importance = Math.max(2, Math.min(8, 2 + Math.floor(entryText.length / 160) + emotionalWords.filter(word => lower.includes(word)).length));
+    return {
+      title: titleWords || "Untitled Memory",
+      tags: tags.length ? tags : ["memory", "reflection"],
+      importance,
+      summary: entryText.length > 220 ? entryText.slice(0, 217).trim() + "..." : entryText
+    };
+  }
+
+  function renderSavedCard(parsed) {
+    const sc = $("saved-card");
+    sc.style.display = "block";
+    sc.innerHTML = `<div class="sc-top"><div class="sc-title">${escapeHTML(parsed.title)}</div><div class="sc-imp">${impDot(parsed.importance)}${parsed.importance}/10</div></div>
+      <div class="sc-summary">${escapeHTML(parsed.summary)}</div>
+      <div class="sc-tags">${(parsed.tags || []).map(t => `<span class="sc-tag">${escapeHTML(t)}</span>`).join("")}</div>`;
+  }
+
+  async function classify() {
+    const entryText = $("entry").value.trim();
+    if (!entryText) return;
+    const btn = $("classify-btn"), status = $("status");
+    btn.disabled = true; btn.textContent = "thinking…"; status.textContent = ""; $("saved-card").style.display = "none";
+
+    try {
+      const raw = await callGroq(PROMPT + entryText);
+      if (!raw) throw new Error("empty response");
+      const parsed = parseJSON(raw);
+      saveEntry(entryText, parsed);
+      $("entry").value = ""; status.textContent = "";
+      renderSavedCard(parsed);
+    } catch (err) {
+      const parsed = localClassify(entryText);
+      saveEntry(entryText, parsed);
+      $("entry").value = "";
+      renderSavedCard(parsed);
+      status.textContent = "saved locally";
+    } finally {
+      btn.disabled = false; btn.textContent = "save memory";
+      refreshAll();
+    }
+  }
+
+  // ── init ───────────────────────────────────────────────────────
+  window.addEventListener("load", () => { syncTimelineControls(); loadWebTitle(); showReminder(); setupWebEvents(); });
+</script>
+
+</body>
+</html>
