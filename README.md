@@ -15,7 +15,7 @@ This includes a web view, in which you can see how the tags assinged to the memo
 
 *   Pure HTML5 & Modern JavaScript (ES6+)
 *   Local Storage API (for secure, client-side data persistence)
-*   Groq / Google Gemini APIs (for intelligent context retrieval)
+*   Groq (for intelligent context retrieval)
 *   Hosted beautifully on Vercel
 
 ## ⚙️ Setup & Usage
